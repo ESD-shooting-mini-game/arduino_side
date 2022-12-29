@@ -1,49 +1,102 @@
-const int button = 10;                        //Button to start program
-const int IN1 = 7;
-const int IN2 = 8;
+#include "pitches.h"
+//#define buzzer 8
+
+//const int button = 10;
+const int button1 = 2;
+const int IN1 = 6;
+const int IN2 = 7;
+const int buzzer = 8;
+const int sw = 3; // limit switch
+
+int score = 0;
+volatile bool hit = false;
+volatile long score_time = 0;
 
 void setup() {
   Serial.begin(9600);
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
-  pinMode(button, INPUT_PULLUP);
+  pinMode(buzzer, OUTPUT);
+  pinMode(button1, INPUT_PULLUP);
+  pinMode(sw, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(sw), hitTriggered, FALLING);
 }
 
 void loop() {
-  bool button_state = digitalRead(button);
+  bool button_state = digitalRead(button1);
 
-  if (button_state == LOW) {                  //If button is pressed
+  if (button_state == LOW) {
+    tone(buzzer, 1047);
+    delay(800);
+    noTone(buzzer);
+    delay(200);
+    tone(buzzer, 1047);
+    delay(800);
+    noTone(buzzer);
+    delay(200);
+    tone(buzzer, 1865);
+    delay(1000);
+    noTone(buzzer);
+    
+    Serial.println("game started");
+    hit = false;
     shoot_mode();
+    Serial.println("game ended");
   }
-
 }
 
 void shoot_mode() {
-  unsigned long program_time = millis();
-  unsigned long  prev_time = millis();
-  int mode = 1;
   digitalWrite(IN1, LOW); // Extend
   digitalWrite(IN2, HIGH);
 
-  while (millis() - program_time < 30000) {   // DURATION OF A ROUND
+  unsigned long program_time = millis();
+  unsigned long  prev_time = millis();
+  unsigned long  music_time = millis();
+  int mode = 1;
 
-    if (millis() - prev_time > 12000) {       // DURATION BEFORE ACTUATOR CYCLES
+  while (millis() - program_time < 30000) { // DURATION OF A ROUND
+
+    if (millis() - prev_time > 12000) { // DURATION BEFORE ACTUATOR CYCLES
       if (mode < 0) {
-        digitalWrite(IN1, LOW);               // Extend
+        digitalWrite(IN1, LOW); // Extend
         digitalWrite(IN2, HIGH);
       } else {
-        digitalWrite(IN1, HIGH);              // Retract
+        digitalWrite(IN1, HIGH); // Retract
         digitalWrite(IN2, LOW);
-      } 
-      prev_time = millis();
+
+      } prev_time = millis();
       mode = -mode;
     }
 
-                                              // CODE SENSOR SINI
+    // SENSOR CODE
+    if (hit) {
+      if (millis() - score_time > 200) {
+        score += 1;
+        Serial.println("player scored");
+        hit = false;
+        tone(buzzer, 2960);
+        music_time = millis();
+      }
+    }
+
+    if (millis() - music_time > 500) { // DURATION OF SOUND
+      noTone(buzzer);
+    }
+    //    Serial.println(score);
+
   }
 
-  digitalWrite(IN1, HIGH);                    // Retract
+  
+  digitalWrite(IN1, HIGH); // Retract
   digitalWrite(IN2, LOW);
+
+  tone(buzzer, 1047);
+  delay(100);
+  noTone(buzzer);
+  delay(50);
+  tone(buzzer, 1319);
+  delay(500);
+  noTone(buzzer);
   return;
 }
 
@@ -61,4 +114,10 @@ void retract(int x) {
   delay(x);
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, LOW);
+}
+
+// ISR
+void hitTriggered() {
+  hit = true;
+  score_time = millis();
 }

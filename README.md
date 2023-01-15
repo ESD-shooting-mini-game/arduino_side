@@ -1,3 +1,3 @@
-# arduino_side
+# Arduino coding
 
-coding utk arduino xD
+Coding for the handling of the program on the Arduino side
